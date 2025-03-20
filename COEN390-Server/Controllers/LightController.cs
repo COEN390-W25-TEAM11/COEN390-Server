@@ -48,6 +48,20 @@ public class LightController : ControllerBase {
         return Ok(result);
     }
 
+    [HttpGet("{lightId}")]
+    [ActionName("GetLight")]
+    public async Task<ActionResult<Light>> GetLightById(Guid lightId) {
+    
+        var result = await _DbContext.Lights.FindAsync(lightId);
+
+        if (result == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(result);
+    }
+
     [HttpPost]
     [ActionName("PostLight")]
     public async Task<IActionResult> PostLight(LightDto lightDto) {
