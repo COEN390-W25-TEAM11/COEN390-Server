@@ -50,12 +50,25 @@ public class LightController : ControllerBase {
 
     [HttpPost]
     [ActionName("PostLight")]
-    public async Task<IActionResult> PostLight(Light light) {
+    public async Task<IActionResult> PostLight(LightDto lightDto) {
         // Create a light to be stored in the database
+
+        try {
+        var light = new Light()
+        {
+            Id = Guid.Parse(lightDto.Id),
+            Name = lightDto.Name,
+            Overide = lightDto.Overide,
+            State = lightDto.State,
+        };
 
         _DbContext.Lights.Add(light);
         await _DbContext.SaveChangesAsync();
         return Created();
+        
+        } catch (Exception e) {
+            return BadRequest(e.Message);
+        }
     }
 
     [HttpPatch("{lightId}")]
@@ -84,5 +97,6 @@ public class LightController : ControllerBase {
         return Ok();
     }
 
+    public record LightDto(string Id, string Name, bool Overide, int State);
     public record LightUpdateDto(string Name, bool Overide, int State);
 }
