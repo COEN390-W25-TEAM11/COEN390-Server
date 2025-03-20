@@ -69,6 +69,17 @@ if (app.Environment.IsDevelopment()) {
 }
 
 app.UseWebSockets();
+app.Map("/websockets", async context => { 
+    if (context.WebSockets.IsWebSocketRequest) {
+        using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+        var wsGuid = Guid.NewGuid();
+        var settingsService = context.RequestServices.GetRequiredService<SettingsUpdateService>();
+        settingsService.AddWebsocket(wsGuid, webSocket);
+        await settingsService.Listen(wsGuid, webSocket);
+    } else {
+        context.Response.StatusCode = 400;
+    }
+});
 
 app.UseHttpsRedirection();
 

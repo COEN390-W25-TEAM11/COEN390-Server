@@ -16,6 +16,11 @@ public class SettingsUpdateService {
     public async Task sendUpdate(Guid lightId, object update) {
         var websocket = _activeConnections.FirstOrDefault(_activeConnections => _activeConnections.Key == lightId).Value;
 
+        if (websocket == null) {
+            Console.WriteLine($"WebSocket for lightId: {lightId} not found.");
+            return; 
+        }
+
         var message = Newtonsoft.Json.JsonConvert.SerializeObject(update);
         var messageBytes = Encoding.UTF8.GetBytes(message);
         var segment = new ArraySegment<byte>(messageBytes);
