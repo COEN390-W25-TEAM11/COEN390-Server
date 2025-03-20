@@ -111,6 +111,29 @@ public class LightController : ControllerBase {
         return Ok();
     }
 
+    [HttpGet("{lightId}/MotionHistory")] 
+    [ActionName("GetMotionByLight")]
+    public async Task<ActionResult<IEnumerable<object>>> GetMotionByLight(Guid lightId) {
+        var light = await _DbContext.Lights
+            .Include(l => l.MotionHistory)
+            .FirstOrDefaultAsync(l => l.Id == lightId);
+
+        if (light == null) {
+            return NotFound();
+        }
+
+        var motionHistory = light.MotionHistory
+            .OrderByDescending(m => m.DateTime)
+            .Select(m => new {
+                m.Id,
+                m.DateTime,
+                m.motion
+            })
+            .Take(50); 
+
+        return Ok(motionHistory);
+    }
+
     public record LightDto(string Id, string Name, bool Overide, int State);
     public record LightUpdateDto(string Name, bool Overide, int State);
 }
