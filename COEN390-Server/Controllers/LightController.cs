@@ -48,14 +48,41 @@ public class LightController : ControllerBase {
         return Ok(result);
     }
 
+    [HttpGet("{lightId}")]
+    [ActionName("GetLight")]
+    public async Task<ActionResult<Light>> GetLightById(Guid lightId) {
+    
+        var result = await _DbContext.Lights.FindAsync(lightId);
+
+        if (result == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(result);
+    }
+
     [HttpPost]
     [ActionName("PostLight")]
-    public async Task<IActionResult> PostLight(Light light) {
+    public async Task<IActionResult> PostLight(LightDto lightDto) {
         // Create a light to be stored in the database
+
+        try {
+        var light = new Light()
+        {
+            Id = Guid.Parse(lightDto.Id),
+            Name = lightDto.Name,
+            Overide = lightDto.Overide,
+            State = lightDto.State,
+        };
 
         _DbContext.Lights.Add(light);
         await _DbContext.SaveChangesAsync();
         return Created();
+        
+        } catch (Exception e) {
+            return BadRequest(e.Message);
+        }
     }
 
     [HttpPatch("{lightId}")]
@@ -84,5 +111,29 @@ public class LightController : ControllerBase {
         return Ok();
     }
 
+    [HttpGet("{lightId}/MotionHistory")] 
+    [ActionName("GetMotionByLight")]
+    public async Task<ActionResult<IEnumerable<object>>> GetMotionByLight(Guid lightId) {
+        var light = await _DbContext.Lights
+            .Include(l => l.MotionHistory)
+            .FirstOrDefaultAsync(l => l.Id == lightId);
+
+        if (light == null) {
+            return NotFound();
+        }
+
+        var motionHistory = light.MotionHistory
+            .OrderByDescending(m => m.DateTime)
+            .Select(m => new {
+                m.Id,
+                m.DateTime,
+                m.motion
+            })
+            .Take(50); 
+
+        return Ok(motionHistory);
+    }
+
+    public record LightDto(string Id, string Name, bool Overide, int State);
     public record LightUpdateDto(string Name, bool Overide, int State);
 }

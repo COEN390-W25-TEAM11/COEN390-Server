@@ -33,7 +33,7 @@ public class AuthController : ControllerBase {
             _DbContext.Users.Any(u => u.Username == user.Username && u.Password == user.Password)
         ) {
             var token = GenerateJwtToken(user.Username);
-            return Ok(token);
+            return Ok(new { token = token }); // return JSON object
         }
 
         return Unauthorized();
