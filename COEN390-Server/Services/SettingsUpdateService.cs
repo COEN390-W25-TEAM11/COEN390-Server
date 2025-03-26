@@ -17,8 +17,8 @@ public class SettingsUpdateService {
         var websocket = _activeConnections.FirstOrDefault(_activeConnections => _activeConnections.Key == lightId).Value;
 
         if (websocket == null) {
-            Console.WriteLine($"WebSocket for lightId: {lightId} not found.");
-            return; 
+            Console.WriteLine($"Warning: No websocket connected to light with Guid: {lightId} to relay the update.");
+            return;
         }
 
         var message = Newtonsoft.Json.JsonConvert.SerializeObject(update);
