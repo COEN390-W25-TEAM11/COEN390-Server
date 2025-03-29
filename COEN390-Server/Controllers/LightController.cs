@@ -1,9 +1,7 @@
 ﻿using COEN390_Server.Services;
 using Infrastructure;
-using Infrastructure.Entity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace COEN390_Server.Controllers;
 
@@ -24,70 +22,10 @@ public class LightController : ControllerBase {
     }
 
 
-    [HttpGet]
-    [ActionName("GetLights")]
-    public async Task<ActionResult<IEnumerable<Light>>> GetLights() {
-        // Get all the lights in this database with the last 50 motion history
-
-        var lights = await _DbContext.Lights
-            .Include(l => l.MotionHistory)
-            .ToListAsync();
-
-        var result = lights.Select(l => new {
-            l.Id,
-            l.Name,
-            l.Overide,
-            l.State,
-            MotionHistory = l.MotionHistory.OrderByDescending(m => m.DateTime).Select(m => new {
-                m.Id,
-                m.DateTime,
-                m.motion
-            }).Take(50)
-        });
-
-        return Ok(result);
-    }
-
-    [HttpGet("{lightId}")]
-    [ActionName("GetLight")]
-    public async Task<ActionResult<Light>> GetLightById(Guid lightId) {
-    
-        var result = await _DbContext.Lights.FindAsync(lightId);
-
-        if (result == null)
-        {
-            return NotFound();
-        }
-
-        return Ok(result);
-    }
-
-    [HttpPost]
-    [ActionName("PostLight")]
-    public async Task<IActionResult> PostLight(LightDto lightDto) {
-        // Create a light to be stored in the database
-
-        try {
-        var light = new Light()
-        {
-            Id = Guid.Parse(lightDto.Id),
-            Name = lightDto.Name,
-            Overide = lightDto.Overide,
-            State = lightDto.State,
-        };
-
-        _DbContext.Lights.Add(light);
-        await _DbContext.SaveChangesAsync();
-        return Created();
-        
-        } catch (Exception e) {
-            return BadRequest(e.Message);
-        }
-    }
 
     [HttpPatch("{lightId}")]
-    [ActionName("PostLight")]
-    public async Task<IActionResult> PostLight(Guid lightId, LightUpdateDto lightUpdateDto) {
+    [ActionName("PatchLight")]
+    public async Task<IActionResult> PatchLight(Guid lightId, LightUpdateModel lightUpdateDto) {
 
         var light = await _DbContext.Lights.FindAsync(lightId);
 
@@ -101,39 +39,33 @@ public class LightController : ControllerBase {
 
         await _DbContext.SaveChangesAsync();
 
-        var updateObject = new {
-            overide = lightUpdateDto.Overide,
-            state = lightUpdateDto.State
-        };
-
-        await _settingsUpdateService.sendUpdate(lightId, updateObject);
+        await _settingsUpdateService.sendUpdate(light.EspId);
 
         return Ok();
     }
 
-    [HttpGet("{lightId}/MotionHistory")] 
-    [ActionName("GetMotionByLight")]
-    public async Task<ActionResult<IEnumerable<object>>> GetMotionByLight(Guid lightId) {
-        var light = await _DbContext.Lights
-            .Include(l => l.MotionHistory)
-            .FirstOrDefaultAsync(l => l.Id == lightId);
+    [HttpPatch("{sensorId}")]
+    [ActionName("PatchSensor")]
+    public async Task<IActionResult> PatchSensor(Guid sensorId, SensorUpdateModel sensorUpdateDto) {
 
-        if (light == null) {
+        var sensor = await _DbContext.Sensors.FindAsync(sensorId);
+
+        if (sensor is null) {
             return NotFound();
         }
 
-        var motionHistory = light.MotionHistory
-            .OrderByDescending(m => m.DateTime)
-            .Select(m => new {
-                m.Id,
-                m.DateTime,
-                m.motion
-            })
-            .Take(50); 
+        sensor.Name = sensorUpdateDto.Name;
+        sensor.Sensitivity = sensorUpdateDto.Sensitivity;
+        sensor.Timeout = sensorUpdateDto.Timeout;
 
-        return Ok(motionHistory);
+        await _DbContext.SaveChangesAsync();
+
+        await _settingsUpdateService.sendUpdate(sensor.EspId);
+
+        return Ok();
     }
 
     public record LightDto(string Id, string Name, bool Overide, int State);
-    public record LightUpdateDto(string Name, bool Overide, int State);
+    public record LightUpdateModel(string Name, bool Overide, int State);
+    public record SensorUpdateModel(string Name, int Sensitivity, int Timeout);
 }

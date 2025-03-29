@@ -8,6 +8,5 @@ public class Motion {
     public DateTime DateTime { get; set; }
     public bool motion { get; set; }
 
-    public Light Light { get; set; }
+    public Sensor Sensor { get; set; }
 }
-

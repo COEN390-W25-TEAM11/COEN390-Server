@@ -9,36 +9,33 @@ public class SettingsUpdateService {
 
     private readonly ConcurrentDictionary<Guid, WebSocket> _activeConnections = new();
 
-    public void AddWebsocket(Guid lightId, WebSocket webSocket) {
-        _activeConnections.TryAdd(lightId, webSocket);
+    public void AddWebsocket(WebSocket webSocket) {
+        _activeConnections.TryAdd(Guid.NewGuid(), webSocket);
     }
 
-    public async Task sendUpdate(Guid lightId, object update) {
-        var websocket = _activeConnections.FirstOrDefault(_activeConnections => _activeConnections.Key == lightId).Value;
-
-        if (websocket == null) {
-            Console.WriteLine($"Warning: No websocket connected to light with Guid: {lightId} to relay the update.");
-            return;
-        }
+    public async Task sendUpdate(object update) {
 
         var message = Newtonsoft.Json.JsonConvert.SerializeObject(update);
         var messageBytes = Encoding.UTF8.GetBytes(message);
         var segment = new ArraySegment<byte>(messageBytes);
 
-        if (websocket.State == WebSocketState.Open) {
-            await websocket.SendAsync(
+        foreach (var connection in _activeConnections) {
+        if (connection.Value.State == WebSocketState.Open) {
+            await connection.Value.SendAsync(
                 segment,
                 WebSocketMessageType.Text,
                 true,
                 CancellationToken.None);
         }
         else {
-            _activeConnections.TryRemove(lightId, out _);
+            _activeConnections.TryRemove(connection.Key, out _);
+        }
         }
     }
 
-    public async Task Listen(Guid wsGuid, WebSocket webSocket) {
+    public async Task Listen(WebSocket webSocket) {
         var buffer = new byte[1024 * 4];
+        
 
         try {
             while (webSocket.State == WebSocketState.Open) {
@@ -48,9 +45,11 @@ public class SettingsUpdateService {
                     break;
                 }
             }
+
+            _activeConnections.TryRemove(id, out _);
         }
         finally {
-            _activeConnections.TryRemove(wsGuid, out _);
+            _activeConnections.TryRemove(id, out _);
             await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
         }
     }

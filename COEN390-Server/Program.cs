@@ -70,7 +70,7 @@ if (app.Environment.IsDevelopment()) {
 
 app.UseWebSockets();
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
