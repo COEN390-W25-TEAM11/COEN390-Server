@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
 
@@ -9,9 +10,9 @@ public class NotificationService {
     private readonly ConcurrentDictionary<Guid, WebSocket> _activeConnections = new();
 
     public Guid AddWebsocket(WebSocket webSocket) {
-        var connectionId = Guid.NewGuid();
-        _activeConnections.TryAdd(connectionId, webSocket);
-        return connectionId;
+        var guid = Guid.NewGuid();
+        _activeConnections.TryAdd(guid, webSocket);
+        return guid;
     }
 
     public async Task SendToAll(string message) {
@@ -32,7 +33,7 @@ public class NotificationService {
         }
     }
 
-    public async Task Listen(Guid wsGuid, WebSocket webSocket) {
+    public async Task Listen(Guid guid, WebSocket webSocket) {
         var buffer = new byte[1024 * 4];
 
         try {
@@ -43,9 +44,11 @@ public class NotificationService {
                     break;
                 }
             }
+
+            _activeConnections.TryRemove(guid, out _);
         }
         finally {
-            _activeConnections.TryRemove(wsGuid, out _);
+            _activeConnections.TryRemove(guid, out _);
             await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
         }
     }

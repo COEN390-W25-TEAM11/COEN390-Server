@@ -2,40 +2,59 @@
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
+using Infrastructure;
 
 namespace COEN390_Server.Services;
 
 public class SettingsUpdateService {
 
-    private readonly ConcurrentDictionary<Guid, WebSocket> _activeConnections = new();
+    private readonly MyDbContext _DbContext;
 
-    public void AddWebsocket(WebSocket webSocket) {
-        _activeConnections.TryAdd(Guid.NewGuid(), webSocket);
+    public SettingsUpdateService(
+        MyDbContext myDbContext
+    ) {
+        _DbContext = myDbContext;
     }
 
-    public async Task sendUpdate(object update) {
+
+    private readonly ConcurrentDictionary<Guid, WebSocket> _activeConnections = new();
+
+    public Guid AddWebsocket(WebSocket webSocket) {
+        var guid = Guid.NewGuid();
+        _activeConnections.TryAdd(guid, webSocket);
+        return guid;
+    }
+
+    public async Task UpdateEsp(Guid espId) {
+        //throw new NotImplementedException();
+
+        //var updateModel = ...
+
+        //sendUpdate(updateModel);
+    }
+
+    private async Task sendUpdate(object update) {
 
         var message = Newtonsoft.Json.JsonConvert.SerializeObject(update);
         var messageBytes = Encoding.UTF8.GetBytes(message);
         var segment = new ArraySegment<byte>(messageBytes);
 
         foreach (var connection in _activeConnections) {
-        if (connection.Value.State == WebSocketState.Open) {
-            await connection.Value.SendAsync(
-                segment,
-                WebSocketMessageType.Text,
-                true,
-                CancellationToken.None);
-        }
-        else {
-            _activeConnections.TryRemove(connection.Key, out _);
-        }
+            if (connection.Value.State == WebSocketState.Open) {
+                await connection.Value.SendAsync(
+                    segment,
+                    WebSocketMessageType.Text,
+                    true,
+                    CancellationToken.None);
+            }
+            else {
+                _activeConnections.TryRemove(connection.Key, out _);
+            }
         }
     }
 
-    public async Task Listen(WebSocket webSocket) {
+    public async Task Listen(Guid guid, WebSocket webSocket) {
         var buffer = new byte[1024 * 4];
-        
 
         try {
             while (webSocket.State == WebSocketState.Open) {
@@ -46,10 +65,10 @@ public class SettingsUpdateService {
                 }
             }
 
-            _activeConnections.TryRemove(id, out _);
+            _activeConnections.TryRemove(guid, out _);
         }
         finally {
-            _activeConnections.TryRemove(id, out _);
+            _activeConnections.TryRemove(guid, out _);
             await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
         }
     }

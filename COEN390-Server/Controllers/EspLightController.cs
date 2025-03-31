@@ -37,22 +37,31 @@ public class EspLightController : ControllerBase {
             .Where(s => request.sensorPins.Contains(s.Pin))
             .ToListAsync();
         
-        // add sensors and lights that are not already registered
-        foreach (var light in lights) {
-            if (!lights.Any(l => l.Pin == light.Pin)) {
+        foreach (var lightPin in request.lightPins) {
+            if (!lights.Any(l => l.Pin == lightPin)) {
                 _DbContext.Add(new Light {
                     Id = Guid.NewGuid(),
                     EspId = espId,
-                    Pin = light.Pin,
+                    Pin = lightPin,
+                    Name = $"Light {lightPin}",
+                    Overide = false,
+                    State = 0,
+                    Brightness = 100,
+                    assigned = new List<Assigned>(),
                 });
             }
         }
-        foreach (var sensor in sensors) {
-            if (!sensors.Any(s => s.Pin == sensor.Pin)) {
+        foreach (var sensorPin in request.sensorPins) {
+            if (!sensors.Any(s => s.Pin == sensorPin)) {
                 _DbContext.Add(new Sensor {
                     Id = Guid.NewGuid(),
                     EspId = espId,
-                    Pin = sensor.Pin,
+                    Pin = sensorPin,
+                    Name = $"Sensor {sensorPin}",
+                    Sensitivity = 100,
+                    Timeout = 1000,
+                    MotionHistory = new List<Motion>(),
+                    assigned = new List<Assigned>(),
                 });
             }
         }
@@ -91,8 +100,8 @@ public class EspLightController : ControllerBase {
         if (HttpContext.WebSockets.IsWebSocketRequest) {
             using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
-            _SettingsUpdateService.AddWebsocket(webSocket);
-            await _SettingsUpdateService.Listen(webSocket);
+            var guid = _SettingsUpdateService.AddWebsocket(webSocket);
+            await _SettingsUpdateService.Listen(guid, webSocket);
         }
         else {
             HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
