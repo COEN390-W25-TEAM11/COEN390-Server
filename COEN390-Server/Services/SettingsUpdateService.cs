@@ -8,12 +8,10 @@ namespace COEN390_Server.Services;
 
 public class SettingsUpdateService {
 
-    private readonly MyDbContext _DbContext;
+    private readonly IServiceProvider _serviceProvider;
 
-    public SettingsUpdateService(
-        MyDbContext myDbContext
-    ) {
-        _DbContext = myDbContext;
+    public SettingsUpdateService(IServiceProvider serviceProvider) {
+        _serviceProvider = serviceProvider;
     }
 
 
@@ -26,6 +24,10 @@ public class SettingsUpdateService {
     }
 
     public async Task UpdateEsp(Guid espId) {
+
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MyDbContext>();
+
         //throw new NotImplementedException();
 
         //var updateModel = ...
