@@ -27,15 +27,30 @@ public class ApiController : ControllerBase {
     [ActionName("Get")]
     public async Task<ResponseModel> Get() {
         var lights = _DbContext.Lights.ToListAsync();
-        var sensors = _DbContext.Sensors.ToListAsync();
+        var sensors = _DbContext.Sensors.Include(s => s.MotionHistory).ToListAsync();
         var assigned = _DbContext.Assigneds.ToListAsync();
 
-        return new ResponseModel(
-            (await lights).Select(l => (l.Id, l.Name, l.Overide, l.State, l.Brightness)).ToArray(),
-            (await sensors).Select(s => (s.Id, s.Name, s.Sensitivity, s.Timeout, s.MotionHistory.Take(25).Select(mh => (mh.DateTime, mh.motion)).ToArray())).ToArray(),
-            (await assigned).Select(a => (a.Id, a.Light.Id, a.Sensor.Id)).ToArray()
-            );
-
+        return new ResponseModel {
+            Lights = (await lights).Select(l => new ResponseModel.ResponseLightModel { 
+                Id = l.Id,
+                Name = l.Name,
+                Overide = l.Overide,
+                State = l.State,
+                Brightness = l.Brightness,
+            }),
+            Sensors = (await sensors).Select(s => new ResponseModel.ResponseSensorModel {
+                Id = s.Id,
+                Name = s.Name,
+                Sensitivity = s.Sensitivity,
+                Timeout = s.Timeout,
+                Motion = s.MotionHistory?.Select(m => new ResponseModel.ResponseMotionModel { DateTime = m.DateTime, Motion = m.motion }).ToList() ?? new List<ResponseModel.ResponseMotionModel>(),
+            }),
+            Combinations = (await assigned).Select(a => new ResponseModel.ResponseAssignedModel {
+                Id = a.Id,
+                LightId = a.Light.Id,
+                SensorId = a.Sensor.Id,
+            })
+        };
     }
 
     [HttpPatch("light/{lightId}")]
@@ -143,7 +158,10 @@ public class ApiController : ControllerBase {
     [HttpDelete("assigned/{id}")]
     [ActionName("DeleteAssignedLightAndSensor")]
     public async Task<IActionResult> DeleteAssignedLightAndSensor(Guid id) {
-        var assigned = await _DbContext.Assigneds.FindAsync(id);
+        var assigned = await _DbContext.Assigneds
+            .Include(x => x.Light)
+            .Include(x => x.Sensor)
+            .FirstOrDefaultAsync(x => x.Id == id);
 
         if (assigned is null) {
             return NotFound();
@@ -160,11 +178,39 @@ public class ApiController : ControllerBase {
     }
 
 
-    public record ResponseModel(
-        (Guid Id, string Name, bool Override, int State, int Brightness)[] Lights,
-        (Guid Id, string Name, int Sensitivity, int Timeout, (DateTime DateTime, bool Motion)[] MotionHistory)[] Sensors,
-        (Guid Id, Guid LightId, Guid SensorId)[] Combinations
-    );
+    public class ResponseModel {
+
+        public required IEnumerable<ResponseLightModel> Lights { get; set; }
+        public required IEnumerable<ResponseSensorModel> Sensors { get; set; }
+        public required IEnumerable<ResponseAssignedModel> Combinations { get; set; }
+
+        public class ResponseLightModel {
+            public required Guid Id { get; set; }
+            public required string Name { get; set; }
+            public required bool Overide { get; set; }
+            public required int State { get; set; }
+            public required int Brightness { get; set; }
+        }
+
+        public class ResponseSensorModel {
+            public required Guid Id { get; set; }
+            public required string Name { get; set; }
+            public required int Sensitivity { get; set; }
+            public required int Timeout { get; set; }
+            public required IEnumerable<ResponseMotionModel> Motion { get; set; }
+        }
+
+        public class ResponseAssignedModel {
+            public required Guid Id { get; set; }
+            public required Guid LightId { get; set; }
+            public required Guid SensorId { get; set; }
+        }
+
+        public class ResponseMotionModel {
+            public required DateTime DateTime { get; set; }
+            public required bool Motion { get; set; }
+        }
+    };
 
     public record LightUpdateModel(string Name, bool Overide, int State);
     public record SensorUpdateModel(string Name, int Sensitivity, int Timeout);

@@ -66,14 +66,16 @@ public class EspLightController : ControllerBase {
             }
         }
 
+        await _DbContext.SaveChangesAsync();
+
         return Ok();
     }
 
-    [HttpPost("movement/{pin}")]
-    public async Task<IActionResult> MovementUpdate(int pin, bool movement) {
+    [HttpPost("movement/{espId}/{pin}")]
+    public async Task<IActionResult> MovementUpdate(Guid espId, int pin, bool movement) {
 
         var sensor = await _DbContext.Sensors
-            .FirstOrDefaultAsync(s => s.Pin == pin);
+            .FirstOrDefaultAsync(s => s.EspId == espId && s.Pin == pin);
 
         if (sensor == null) {
             return NotFound();
@@ -94,14 +96,13 @@ public class EspLightController : ControllerBase {
         return Ok();
     }
 
-    [Route("ws")]
+    [Route("ws/{espId}")]
     [ApiExplorerSettings(IgnoreApi = true)]
-    public async Task UpdateSettings() {
+    public async Task UpdateSettings(Guid espId) {
         if (HttpContext.WebSockets.IsWebSocketRequest) {
             using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
-            var guid = _SettingsUpdateService.AddWebsocket(webSocket);
-            await _SettingsUpdateService.Listen(guid, webSocket);
+            await _SettingsUpdateService.AddWebsocket(espId, webSocket);
         }
         else {
             HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
