@@ -26,12 +26,58 @@ public class EspLightController : ControllerBase {
         _SettingsUpdateService = settingsUpdateService;
     }
 
-    [HttpPost("{lightId}")]
-    public async Task<IActionResult> MovementUpdate(Guid lightId, bool movement) {
+    [HttpPost("register/{espId}")]
+    public async Task<IActionResult> Register(Guid espId, RegisterRequest request) {
+        
+        var lights = await _DbContext.Lights
+            .Where(l => request.lightPins.Contains(l.Pin))
+            .ToListAsync();
 
-        var light = _DbContext.Lights.Find(lightId);
+        var sensors = await _DbContext.Sensors
+            .Where(s => request.sensorPins.Contains(s.Pin))
+            .ToListAsync();
+        
+        foreach (var lightPin in request.lightPins) {
+            if (!lights.Any(l => l.Pin == lightPin)) {
+                _DbContext.Add(new Light {
+                    Id = Guid.NewGuid(),
+                    EspId = espId,
+                    Pin = lightPin,
+                    Name = $"Light {lightPin}",
+                    Overide = false,
+                    State = 0,
+                    Brightness = 100,
+                    assigned = new List<Assigned>(),
+                });
+            }
+        }
+        foreach (var sensorPin in request.sensorPins) {
+            if (!sensors.Any(s => s.Pin == sensorPin)) {
+                _DbContext.Add(new Sensor {
+                    Id = Guid.NewGuid(),
+                    EspId = espId,
+                    Pin = sensorPin,
+                    Name = $"Sensor {sensorPin}",
+                    Sensitivity = 100,
+                    Timeout = 1000,
+                    MotionHistory = new List<Motion>(),
+                    assigned = new List<Assigned>(),
+                });
+            }
+        }
 
-        if (light == null) {
+        await _DbContext.SaveChangesAsync();
+
+        return Ok();
+    }
+
+    [HttpPost("movement/{espId}/{pin}")]
+    public async Task<IActionResult> MovementUpdate(Guid espId, int pin, bool movement) {
+
+        var sensor = await _DbContext.Sensors
+            .FirstOrDefaultAsync(s => s.EspId == espId && s.Pin == pin);
+
+        if (sensor == null) {
             return NotFound();
         }
 
@@ -39,28 +85,32 @@ public class EspLightController : ControllerBase {
             Id = Guid.NewGuid(),
             DateTime = DateTime.Now,
             motion = movement,
-            Light = light,
+            Sensor = sensor,
         });
         await _DbContext.SaveChangesAsync();
 
         if (movement) {
-            await _NotificationService.SendToAll($"Light {light.Name} has movement");
+            await _NotificationService.SendToAll($"Light {sensor.Name} has movement");
         }
 
         return Ok();
     }
 
-    [Route("ws/{lightId}")]
+    [Route("ws/{espId}")]
     [ApiExplorerSettings(IgnoreApi = true)]
-    public async Task UpdateSettings(Guid lightId) {
+    public async Task UpdateSettings(Guid espId) {
         if (HttpContext.WebSockets.IsWebSocketRequest) {
             using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
-            _SettingsUpdateService.AddWebsocket(lightId, webSocket);
-            await _SettingsUpdateService.Listen(lightId, webSocket);
+            await _SettingsUpdateService.AddWebsocket(espId, webSocket);
         }
         else {
             HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
         }
     }
+
+    public record RegisterRequest(
+        int[] sensorPins,
+        int[] lightPins
+    );
 }

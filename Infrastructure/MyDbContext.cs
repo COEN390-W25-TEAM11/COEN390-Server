@@ -8,6 +8,8 @@ public class MyDbContext : DbContext {
 
     public DbSet<User> Users { get; set; }
     public DbSet<Light> Lights { get; set; }
+    public DbSet<Sensor> Sensors { get; set; }
+    public DbSet<Assigned> Assigneds { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options) {
         options.UseSqlite($"Data Source={DbPath}");
