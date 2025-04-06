@@ -101,6 +101,8 @@ public class SettingsUpdateService {
     private async Task Listen(Guid espId, Guid connectionId, WebSocket webSocket) {
         var buffer = new byte[1024 * 4];
 
+        await UpdateEsp(espId);
+
         try {
             while (webSocket.State == WebSocketState.Open) {
                 var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
