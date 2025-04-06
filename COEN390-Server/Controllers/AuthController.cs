@@ -33,7 +33,7 @@ public class AuthController : ControllerBase {
             _DbContext.Users.Any(u => u.Username == user.Username && u.Password == user.Password)
         ) {
             var token = GenerateJwtToken(user.Username);
-            return Ok(new { token = token }); // return JSON object
+            return Ok(new { token = token });
         }
 
         return Unauthorized();
@@ -42,12 +42,26 @@ public class AuthController : ControllerBase {
     [HttpPost("register")]
     [ActionName("Register")]
     public async Task<ActionResult<string>> Register([FromBody] UserLogin user) {
-        throw new NotImplementedException();
+        // Check if the username already exists
+        if (_DbContext.Users.Any(u => u.Username == user.Username))
+        {
+            return Conflict("Username already exists");
+        }
+        
+        // Create and add new user (for production, passwords should be hashed)
+        _DbContext.Users.Add(new User {
+            Id = Guid.NewGuid(),
+            Username = user.Username,
+            Password = user.Password
+        });
+
+        await _DbContext.SaveChangesAsync();
+
+        return Ok("User registered successfully");
     }
 
     private string GenerateJwtToken(string username) {
-        var claims = new[]
-        {
+        var claims = new[] {
             new Claim(JwtRegisteredClaimNames.Sub, username),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
