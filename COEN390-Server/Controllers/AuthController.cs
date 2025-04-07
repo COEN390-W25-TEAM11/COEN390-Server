@@ -76,7 +76,7 @@ public class AuthController : ControllerBase {
 
         var username = User.Claims.First(c => c.Type == ClaimTypes.Name).Value;
 
-        var user = await _DbContext.Users.FirstOrDefaultAsync(u => u.Username == username && u.Password == request.OldPassword);
+        var user = await _DbContext.Users.FirstOrDefaultAsync(u => u.Username == username);
         if (user is null) {
             return Unauthorized();
         }
@@ -143,6 +143,6 @@ public class AuthController : ControllerBase {
 
 
     public record UserLoginModel(string Username, string Password);
-    public record ChangePasswordModel(string OldPassword, string NewPassword);
+    public record ChangePasswordModel(string NewPassword);
     public record EditUserModel(Guid userId, bool isEnabled, bool isAdmin);
 }
