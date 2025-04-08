@@ -34,6 +34,7 @@ public class ApiController : ControllerBase {
             Lights = (await lights).Select(l => new ResponseModel.ResponseLightModel { 
                 Id = l.Id,
                 Name = l.Name,
+                Pin = l.Pin,
                 Overide = l.Overide,
                 State = l.State,
                 Brightness = l.Brightness,
@@ -41,6 +42,7 @@ public class ApiController : ControllerBase {
             Sensors = (await sensors).Select(s => new ResponseModel.ResponseSensorModel {
                 Id = s.Id,
                 Name = s.Name,
+                Pin = s.Pin,
                 Sensitivity = s.Sensitivity,
                 Timeout = s.Timeout,
                 Motion = s.MotionHistory?.Select(m => new ResponseModel.ResponseMotionModel { DateTime = m.DateTime, Motion = m.motion }).ToList() ?? new List<ResponseModel.ResponseMotionModel>(),
@@ -187,6 +189,7 @@ public class ApiController : ControllerBase {
         public class ResponseLightModel {
             public required Guid Id { get; set; }
             public required string Name { get; set; }
+            public required int Pin { get; set; }
             public required bool Overide { get; set; }
             public required int State { get; set; }
             public required int Brightness { get; set; }
@@ -195,6 +198,7 @@ public class ApiController : ControllerBase {
         public class ResponseSensorModel {
             public required Guid Id { get; set; }
             public required string Name { get; set; }
+            public required int Pin { get; set; }
             public required int Sensitivity { get; set; }
             public required int Timeout { get; set; }
             public required IEnumerable<ResponseMotionModel> Motion { get; set; }
