@@ -109,6 +109,8 @@ public class ApiController : ControllerBase {
         _DbContext.Remove(light);
         await _DbContext.SaveChangesAsync();
 
+	await _settingsUpdateService.UpdateEsp(light.EspId);
+
         return Ok();
     }
 
@@ -123,6 +125,8 @@ public class ApiController : ControllerBase {
 
         _DbContext.Remove(sensor);
         await _DbContext.SaveChangesAsync();
+
+	await _settingsUpdateService.UpdateEsp(light.EspId);
 
         return Ok();
     }
