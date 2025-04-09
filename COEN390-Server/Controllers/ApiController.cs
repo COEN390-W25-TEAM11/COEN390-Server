@@ -115,7 +115,7 @@ public class ApiController : ControllerBase {
     [HttpDelete("sensor/{sensorId}")]
     [ActionName("DeleteSensor")]
     public async Task<IActionResult> DeleteSensor(Guid sensorId) {
-        var sensor = await _DbContext.Lights.FindAsync(sensorId);
+        var sensor = await _DbContext.Sensors.FindAsync(sensorId);
 
         if (sensor is null) {
             return NotFound();
