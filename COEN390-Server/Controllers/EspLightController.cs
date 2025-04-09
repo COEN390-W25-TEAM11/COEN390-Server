@@ -90,7 +90,7 @@ public class EspLightController : ControllerBase {
         await _DbContext.SaveChangesAsync();
 
         if (movement) {
-            await _NotificationService.SendToAll($"Light {sensor.Name} has movement");
+            await _NotificationService.SendToAll($"Sensor {sensor.Name} has movement");
         }
 
         return Ok();
