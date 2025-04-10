@@ -45,7 +45,7 @@ public class ApiController : ControllerBase {
                 Pin = s.Pin,
                 Sensitivity = s.Sensitivity,
                 Timeout = s.Timeout,
-                Motion = s.MotionHistory?.Select(m => new ResponseModel.ResponseMotionModel { DateTime = m.DateTime, Motion = m.motion }).ToList() ?? new List<ResponseModel.ResponseMotionModel>(),
+                Motion = s.MotionHistory?.OrderByDescending(m => m.DateTime).Select(m => new ResponseModel.ResponseMotionModel { DateTime = m.DateTime, Motion = m.motion }).ToList() ?? new List<ResponseModel.ResponseMotionModel>(),
             }),
             Combinations = (await assigned).Select(a => new ResponseModel.ResponseAssignedModel {
                 Id = a.Id,

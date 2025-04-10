@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
+using System.Text.Json;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace COEN390_Server.Services;
 
@@ -15,7 +17,17 @@ public class NotificationService {
         return guid;
     }
 
-    public async Task SendToAll(string message) {
+    public async Task SendMovement(Guid sensorId, DateTime dateTime, bool motion) {
+        var model = new MessageModel {
+            sensorId = sensorId,
+            dateTime = dateTime.ToString("yyyy-MM-ddTHH:mm:ss.fffffff"),
+            motion = motion
+        };
+
+        await SendToAll(JsonSerializer.Serialize(model));
+    }
+
+    private async Task SendToAll(string message) {
         var messageBytes = Encoding.UTF8.GetBytes(message);
         var segment = new ArraySegment<byte>(messageBytes);
 
@@ -51,5 +63,11 @@ public class NotificationService {
             _activeConnections.TryRemove(guid, out _);
             await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
         }
+    }
+
+    private class MessageModel {
+        public required Guid sensorId { get; set; }
+        public required string dateTime { get; set; }
+        public required bool motion { get; set; }
     }
 }
